@@ -113,6 +113,34 @@ async function startServer() {
     res.json(logs[req.params.id] || []);
   });
 
+  app.post('/api/build-apk', (req, res) => {
+    import('child_process').then(({ exec }) => {
+      // First ensure the web assets are up to date and copied
+      exec('npx cap sync android', (syncError, syncStdout, syncStderr) => {
+        if (syncError) {
+          console.error("Sync error:", syncStderr);
+          return res.status(500).json({ error: 'Failed to sync capacitor assets', details: syncStderr });
+        }
+        
+        // Then build the APK using gradle wrapper in the android folder
+        const buildCommand = 'cd android && ./gradlew assembleDebug';
+        exec(buildCommand, (err, stdout, stderr) => {
+          if (err) {
+            console.error("Gradle build error:", stderr);
+            return res.status(500).json({ error: 'Build failed', logs: stderr });
+          }
+          console.log("Gradle build success:", stdout);
+          res.json({ status: 'success', path: '/api/download-apk' });
+        });
+      });
+    });
+  });
+
+  app.get('/api/download-apk', (req, res) => {
+    const apkPath = path.join(__dirname, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+    res.download(apkPath, 'PocketMC-debug.apk');
+  });
+
   app.post('/api/servers/:id/command', (req, res) => {
     const { command } = req.body;
     const serverId = req.params.id;

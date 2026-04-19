@@ -306,18 +306,41 @@ export default function App() {
     addToast('Firewall policy updated', 'info');
   };
 
-  const handleBuildAPK = () => {
-    setBuildProgress(0);
+  const handleBuildAPK = async () => {
+    setBuildProgress(5);
+    addToast('Initiating cloud build sequence...', 'info');
+    
+    // Fallback simulation timer (slow enough to wait for genuine build)
     const interval = setInterval(() => {
       setBuildProgress(prev => {
-        if (prev === null || prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => setBuildProgress(null), 2000);
-          return 100;
-        }
-        return prev + 5;
+        if (prev === null) return null;
+        if (prev >= 95) return 95; // Wait at 95% for actual completion
+        return prev + 2;
       });
-    }, 200);
+    }, 1000);
+
+    try {
+      const res = await fetch('/api/build-apk', { method: 'POST' });
+      if (!res.ok) throw new Error('Build failed on server');
+      
+      const data = await res.json();
+      
+      clearInterval(interval);
+      setBuildProgress(100);
+      addToast('APK Build Successful! Download starting...', 'success');
+      
+      // Trigger download
+      setTimeout(() => {
+        window.location.href = data.path;
+        setBuildProgress(null);
+      }, 1500);
+
+    } catch (err) {
+      clearInterval(interval);
+      setBuildProgress(null);
+      addToast('Build failed: Native environment not configured properly', 'error');
+      console.error('Build Native APK failed:', err);
+    }
   };
 
   const handleStart = async () => {
