@@ -1,0 +1,6 @@
+{
+  "name": "PocketMC Host",
+  "description": "A powerful Minecraft server host for mobile devices with cloud relay support and 24/7 uptime.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
